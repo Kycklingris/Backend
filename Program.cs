@@ -1,8 +1,20 @@
+using Redis.OM;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
+var redisConnectionConfig = new RedisConnectionConfiguration
+{
+    Host = "207.127.94.157",
+    Port = 6380,
+    Password = "test123"
+};
+
+builder.Services.AddSingleton(new RedisConnectionProvider(redisConnectionConfig));
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -16,9 +28,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseDefaultFiles();
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+
+app.UseFileServer();
 
 app.UseAuthorization();
 
