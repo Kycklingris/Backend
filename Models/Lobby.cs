@@ -10,8 +10,9 @@ namespace Backend.Models
         public int MinPlayers { get; set; }
         public int MaxPlayers { get; set; }
         public string Game {  get; set; }
-        public string HostUniqueId { get; set; }
-        public Player[] Players { get; set; } = [];
+        public bool Started { get; set; } = false;
+        public string TurnPassword { get; set; }
+        public List<Player> Players { get; set; } = new();
 
         [JsonConstructor]
         public Lobby() {}
@@ -22,31 +23,43 @@ namespace Backend.Models
             this.MinPlayers = createLobby.MinPlayers;
             this.MaxPlayers = createLobby.MaxPlayers;
             this.Game = createLobby.Game;
-            this.HostUniqueId = Backend.UniqueIshString.GenerateStringLowercase(20);
+            this.TurnPassword = Backend.UniqueIshString.GenerateStringLowercase(20);
             this.Players = [];
         }
     }
 
     public class LobbyHeartbeat
     {
-        public string Id { get; set; }
-        public string HostUniqueId { get; set; }
+        public string Id { get; set; } = "";
+        public string TurnPassword { get; set; } = "";
 
     }
 
     public class Player
     {
         public string Name { get; set; } = "";
-        public bool Admin = false;
-        public string UniqueId { get; set; } = "";
+        public string TurnUsername { get; set; } = "";
+        public string TurnPassword { get; set; } = "";
 
         [JsonConstructor]
         public Player() { }
+
+        public Player(string Name, string lobbyId)
+        {
+            this.Name = Name;
+            this.TurnUsername = lobbyId + "." + Name;
+            this.TurnPassword = Backend.UniqueIshString.GenerateStringLowercase(20);
+        }
+    }
+    public class NewPlayer
+    {
+        public string Name { get; set; } = "";
+        public string LobbyId { get; set; } = "";
     }
 
     public class CreateLobby
     {
-        public string Game { get; set; } = "undefined";
+        public string Game { get; set; } = "";
         public int MaxPlayers { get; set; }
         public int MinPlayers { get; set; }
     }
