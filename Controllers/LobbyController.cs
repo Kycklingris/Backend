@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Redis.OM;
 using Redis.OM.Searching;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Backend.Controllers
 {
@@ -22,7 +23,6 @@ namespace Backend.Controllers
         [HttpPost(Name = "CreateLobby")]
         public async Task<Backend.Models.Lobby> NewLobby([FromBody] Backend.Models.CreateLobby newLobby)
         {
-            var rand = new Random();
             string? Id = null;
 
             while (Id == null)
@@ -44,15 +44,59 @@ namespace Backend.Controllers
             return lobby;
         }
 
-        private async Task SetCoturnUser(string userName, string password)
+        [HttpPatch(Name = "LobbyHearbeat")]
+        public async Task LobbyHeartbeat([FromBody] Backend.Models.LobbyHeartbeat heartbeatLobby)
         {
-            var hashInput = userName + ":smorsoft.com:" + password;
+            var lobby = await _lobbies.FindByIdAsync(heartbeatLobby.Id);
+            if (lobby != null && lobby.HostUniqueId == heartbeatLobby.HostUniqueId)
+            {
+                await UpdateLobbyTTL(lobby);
+            }
+        }
+
+        private async Task SetCoturnUser(string username, string password)
+        {
             await _connectionProvider.Connection.ExecuteAsync("set", [
-                "turn/realm/smorsoft.com/user/" + userName + "/key",
-                Convert.ToHexString(System.Security.Cryptography.MD5.HashData(System.Text.Encoding.ASCII.GetBytes(hashInput))),
+                GenerateRedisKeyFromUsername(username),
+                GenerateHMacKey(username, password),
                 "ex",
                 keyExpire.TotalSeconds.ToString()
                 ]);
+        }
+
+        private async Task UpdateLobbyTTL(Backend.Models.Lobby lobby)
+        {
+            // Lobby itself
+            await _connectionProvider.Connection.ExecuteAsync("expire", [
+                "Lobby:" + lobby.Id,
+                keyExpire.TotalSeconds.ToString(),
+                ]);
+
+            // Host CoTurn Key
+            await _connectionProvider.Connection.ExecuteAsync("expire", [
+                GenerateRedisKeyFromUsername(lobby.Id),
+                keyExpire.TotalSeconds.ToString(),
+                ]);
+
+            // Player CoTurn Keys
+            foreach (var player in lobby.Players)
+            {
+                await _connectionProvider.Connection.ExecuteAsync("expire", [
+                    GenerateRedisKeyFromUsername(lobby.Id + player.Name),
+                    keyExpire.TotalSeconds.ToString(),
+                    ]);
+            }
+        }
+
+        private static string GenerateRedisKeyFromUsername(string username)
+        {
+            return "turn/realm/" + Backend.Constants.Realm + "/user/" + username + "/key";
+        }
+
+        private static string GenerateHMacKey(string username, string password)
+        {
+            string hashInput = username + ":" + Backend.Constants.Realm + ":" + password;
+            return Convert.ToHexString(System.Security.Cryptography.MD5.HashData(System.Text.Encoding.ASCII.GetBytes(hashInput)));
         }
     }
 }
