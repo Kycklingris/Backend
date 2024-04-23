@@ -6,11 +6,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+var redisHost = Environment.GetEnvironmentVariable("REDIS_IP");
+var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT");
+var redisPassword = Environment.GetEnvironmentVariable("REDIS_PASS");
+
+if (redisPort == null)
+{
+    redisPort = "6379";
+}
+
 var redisConnectionConfig = new RedisConnectionConfiguration
 {
-    Host = "207.127.94.157",
-    Port = 6380,
-    Password = "test123"
+    Host = redisHost,
+    Port = int.Parse( redisPort ),
+    Password = redisPassword,
 };
 
 builder.Services.AddSingleton(new RedisConnectionProvider(redisConnectionConfig));
@@ -30,7 +39,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseFileServer();
+// app.UseFileServer();
 
 app.UseAuthorization();
 
