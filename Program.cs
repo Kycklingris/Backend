@@ -1,5 +1,4 @@
 using Redis.OM;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -10,6 +9,7 @@ var redisHost = Environment.GetEnvironmentVariable("REDIS_IP");
 var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT");
 var redisPassword = Environment.GetEnvironmentVariable("REDIS_PASS");
 
+
 if (redisPort == null)
 {
     redisPort = "6379";
@@ -18,7 +18,7 @@ if (redisPort == null)
 var redisConnectionConfig = new RedisConnectionConfiguration
 {
     Host = redisHost,
-    Port = int.Parse( redisPort ),
+    Port = int.Parse(redisPort),
     Password = redisPassword,
 };
 
