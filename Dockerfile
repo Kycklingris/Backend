@@ -1,25 +1,34 @@
 #See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS base
 USER app
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+ARG TARGETARCH
+ARG BUILDPLATFORM
+
 WORKDIR /src
 COPY ["Backend.csproj", "."]
 RUN dotnet restore "./Backend.csproj"
 COPY . .
 WORKDIR "/src/."
-RUN dotnet build "./Backend.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "./Backend.csproj" -c Release -o /app/build -a $TARGETARCH
 
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Backend.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "./Backend.csproj" -c Release -o /app/publish /p:UseAppHost=false \
+    #--runtime alpine-x64 \
+    #--self-contained true \
+    # /p:PublishTrimmed=true \
+    # /p:PublishSingleFile=true \
+    -a $TARGETARCH
 
-FROM base AS final
+FROM --platform=$BUILDPLATFORM base AS final
+ARG TARGETARCH
+ARG BUILDPLATFORM
+
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Backend.dll"]
