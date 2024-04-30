@@ -12,8 +12,8 @@ namespace Backend.Models
         public string Game { get; set; } = "";
         public bool Started { get; set; } = false;
         public string TurnPassword { get; set; } = "";
-        public string? Sdp { get; set; }
-        public List<Player> Players { get; set; } = new();
+        public List<string> Sdp { get; set; } = [];
+        public List<Player> Players { get; set; } = [];
 
         [JsonConstructor]
         public Lobby() {}
@@ -36,9 +36,16 @@ namespace Backend.Models
 
     }
 
+    public class SetLobbySdp
+    {
+        public string LobbyId { get; set; } = "";
+        public string TurnPassword { get; set; } = "";
+        public List<string> Sdp { get; set; } = [];
+    }
+
     public class SetSdp
     {
-        public string Id { get; set; } = "";
+        public string LobbyId { get; set; } = "";
         public string TurnPassword { get; set; } = "";
         public string Sdp { get; set; } = "";
     }
@@ -78,7 +85,14 @@ namespace Backend.Models
             this.player = player;
             this.LobbyId = lobby.Id;
             this.Game = lobby.Game;
-            this.LobbySdp = lobby.Sdp; 
+
+            for (int i = 0; i < lobby.Players.Count; i++)
+            {
+                if (lobby.Players[i].TurnPassword == player.TurnPassword)
+                {
+                    this.LobbySdp = lobby.Sdp[i];
+                }
+            }
         }
     }
 

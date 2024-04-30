@@ -56,9 +56,9 @@ namespace Backend.Controllers
         }
 
         [HttpPatch(Name = "Lobby Set SDP")]
-        public async Task SetSdp([FromBody] Backend.Models.SetSdp lobbySdp)
+        public async Task SetSdp([FromBody] Backend.Models.SetLobbySdp lobbySdp)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbySdp.Id);
+            var lobby = await _lobbies.FindByIdAsync(lobbySdp.LobbyId);
             if (lobby != null && lobby.TurnPassword == lobbySdp.TurnPassword)
             {
                 lobby.Sdp = lobbySdp.Sdp;
@@ -143,7 +143,7 @@ namespace Backend.Controllers
         [HttpPatch(Name = "Set Player Sdp")]
         public async Task SetPlayerSdp([FromBody] Backend.Models.SetSdp playerSdp)
         {
-            var lobby = await _lobbies.FindByIdAsync(playerSdp.Id);
+            var lobby = await _lobbies.FindByIdAsync(playerSdp.LobbyId);
             if (lobby != null)
             {
                 foreach (var player in lobby.Players)
