@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Redis.OM;
 using Redis.OM.Searching;
-using System.Reflection.Metadata.Ecma335;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Backend.Controllers
 {
@@ -19,6 +17,18 @@ namespace Backend.Controllers
         {
             _connectionProvider = connectionProvider;
             _lobbies = (RedisCollection<Backend.Models.Lobby>)connectionProvider.RedisCollection<Backend.Models.Lobby>();
+        }
+
+        [HttpGet(Name = "Check for Lobby")]
+        public async Task<Backend.Models.CheckLobbyResponse?> CheckLobby([FromBody] Backend.Models.CheckLobby requestedLobby)
+        {
+            var lobby = await _lobbies.FindByIdAsync(requestedLobby.Id);
+            if (lobby != null)
+            {
+                return new Backend.Models.CheckLobbyResponse(lobby.Id, lobby.Game);
+            }
+
+            return null;
         }
 
         [HttpPost(Name = "New")]
@@ -43,6 +53,29 @@ namespace Backend.Controllers
             await SetCoturnUser(lobby.Id, lobby.TurnPassword);
 
             return lobby;
+        }
+
+        [HttpPatch(Name = "Lobby Set SDP")]
+        public async Task SetSdp([FromBody] Backend.Models.SetSdp lobbySdp)
+        {
+            var lobby = await _lobbies.FindByIdAsync(lobbySdp.Id);
+            if (lobby != null && lobby.TurnPassword == lobbySdp.TurnPassword)
+            {
+                lobby.Sdp = lobbySdp.Sdp;
+                await _lobbies.UpdateAsync(lobby);
+            }
+        }
+
+        [HttpGet(Name = "PollPlayers")]
+        public async Task<List<Backend.Models.Player>?> PollPlayers([FromBody] Backend.Models.LobbyHeartbeat requestedLobby)
+        {
+            var lobby = await _lobbies.FindByIdAsync(requestedLobby.Id);
+            if (lobby != null && lobby.TurnPassword == requestedLobby.TurnPassword)
+            {
+                return lobby.Players;
+            }
+
+            return null;
         }
 
         [HttpPatch(Name = "Start Lobby")]
@@ -78,16 +111,18 @@ namespace Backend.Controllers
         }
 
         [HttpPost(Name = "Join")]
-        public async Task<Backend.Models.Player?> Join([FromBody] Backend.Models.NewPlayer joiningPlayer)
+        public async Task<Backend.Models.NewPlayerResponse?> Join([FromBody] Backend.Models.NewPlayer joiningPlayer)
         {
             var lobby = await _lobbies.FindByIdAsync(joiningPlayer.LobbyId.ToUpper());
             if (lobby == null || 
                 lobby.Players.Count >= lobby.MaxPlayers ||
+                lobby.Sdp == null ||
                 lobby.Started == true)
             {
                 return null;   
             }
 
+            // Check for conflicting player names
             foreach (var lobbyPlayer in lobby.Players)
             {
                 if (lobbyPlayer.Name.ToLower() == joiningPlayer.Name.ToLower())
@@ -102,9 +137,27 @@ namespace Backend.Controllers
             await _lobbies.UpdateAsync(lobby);
             await SetCoturnUser(player.TurnUsername, player.TurnPassword);
 
-            return player;
+            return new Backend.Models.NewPlayerResponse(player, lobby);
         }
 
+        [HttpPatch(Name = "Set Player Sdp")]
+        public async Task SetPlayerSdp([FromBody] Backend.Models.SetSdp playerSdp)
+        {
+            var lobby = await _lobbies.FindByIdAsync(playerSdp.Id);
+            if (lobby != null)
+            {
+                foreach (var player in lobby.Players)
+                {
+                    if (player.TurnPassword == playerSdp.TurnPassword)
+                    {
+                        player.Sdp = playerSdp.Sdp;
+                        await _lobbies.UpdateAsync(lobby);
+                        return;
+                    }
+                }
+            }
+        }
+        
         private async Task SetCoturnUser(string username, string password)
         {
             await _connectionProvider.Connection.ExecuteAsync("set", [
