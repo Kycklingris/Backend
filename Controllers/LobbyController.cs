@@ -116,7 +116,7 @@ namespace Backend.Controllers
             var lobby = await _lobbies.FindByIdAsync(joiningPlayer.LobbyId.ToUpper());
             if (lobby == null || 
                 lobby.Players.Count >= lobby.MaxPlayers ||
-                lobby.Sdp == null ||
+                lobby.Sdp.Count == 0 ||
                 lobby.Started == true)
             {
                 return null;   

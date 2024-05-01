@@ -12,7 +12,7 @@ namespace Backend.Models
         public string Game { get; set; } = "";
         public bool Started { get; set; } = false;
         public string TurnPassword { get; set; } = "";
-        public List<string> Sdp { get; set; } = [];
+        public List<Sdp> Sdp { get; set; } = [];
         public List<Player> Players { get; set; } = [];
 
         [JsonConstructor]
@@ -29,6 +29,19 @@ namespace Backend.Models
         }
     }
 
+    public class Sdp
+    {
+        public string Session { get; set; } = "";
+        public List<IceCandidate> IceCandidates { get; set; } = [];
+    }
+
+    public class IceCandidate
+    {
+        public string Media { get; set; } = "";
+        public int Index { get; set; } = 0;
+        public string Name { get; set; } = "";
+    }
+
     public class LobbyHeartbeat
     {
         public string Id { get; set; } = "";
@@ -40,14 +53,14 @@ namespace Backend.Models
     {
         public string LobbyId { get; set; } = "";
         public string TurnPassword { get; set; } = "";
-        public List<string> Sdp { get; set; } = [];
+        public List<Sdp> Sdp { get; set; }
     }
 
     public class SetSdp
     {
         public string LobbyId { get; set; } = "";
         public string TurnPassword { get; set; } = "";
-        public string Sdp { get; set; } = "";
+        public Sdp Sdp { get; set; }
     }
 
     public class Player
@@ -55,7 +68,7 @@ namespace Backend.Models
         public string Name { get; set; } = "";
         public string TurnUsername { get; set; } = "";
         public string TurnPassword { get; set; } = "";
-        public string? Sdp { get; set; }
+        public Sdp? Sdp { get; set; }
 
         [JsonConstructor]
         public Player() { }
@@ -78,7 +91,7 @@ namespace Backend.Models
         public Player player { get; set; }
         public string LobbyId { get; set; } = "";
         public string Game { get; set; } = "";
-        public string LobbySdp { get; set; } = "";
+        public Sdp LobbySdp { get; set; }
 
         public NewPlayerResponse(Player player, Lobby lobby)
         {
