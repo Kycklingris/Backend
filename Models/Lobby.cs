@@ -18,12 +18,12 @@ namespace Backend.Models
         [JsonConstructor]
         public Lobby() {}
 
-        public Lobby(CreateLobby createLobby, string Id)
+        public Lobby(int minPlayers, int maxPlayers, string game, string Id)
         {
             this.Id = Id;
-            this.MinPlayers = createLobby.MinPlayers;
-            this.MaxPlayers = createLobby.MaxPlayers;
-            this.Game = createLobby.Game;
+            this.MinPlayers = minPlayers;
+            this.MaxPlayers = maxPlayers;
+            this.Game = game;
             this.TurnPassword = Backend.UniqueIshString.GenerateStringLowercase(20);
             this.Players = [];
         }
@@ -42,26 +42,6 @@ namespace Backend.Models
         public string Name { get; set; } = "";
     }
 
-    public class LobbyHeartbeat
-    {
-        public string Id { get; set; } = "";
-        public string TurnPassword { get; set; } = "";
-
-    }
-
-    public class SetLobbySdp
-    {
-        public string LobbyId { get; set; } = "";
-        public string TurnPassword { get; set; } = "";
-        public List<Sdp> Sdp { get; set; }
-    }
-
-    public class SetSdp
-    {
-        public string LobbyId { get; set; } = "";
-        public string TurnPassword { get; set; } = "";
-        public Sdp Sdp { get; set; }
-    }
 
     public class Player
     {
@@ -79,11 +59,6 @@ namespace Backend.Models
             this.TurnUsername = lobbyId + "." + Name;
             this.TurnPassword = Backend.UniqueIshString.GenerateStringLowercase(20);
         }
-    }
-    public class NewPlayer
-    {
-        public string Name { get; set; } = "";
-        public string LobbyId { get; set; } = "";
     }
 
     public class NewPlayerResponse
@@ -107,18 +82,6 @@ namespace Backend.Models
                 }
             }
         }
-    }
-
-    public class CreateLobby
-    {
-        public string Game { get; set; } = "";
-        public int MaxPlayers { get; set; }
-        public int MinPlayers { get; set; }
-    }
-
-    public class CheckLobby
-    {
-        public string Id { get; set; }
     }
 
     public class CheckLobbyResponse

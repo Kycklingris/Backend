@@ -21,9 +21,9 @@ namespace Backend.Controllers
         }
 
         [HttpGet(Name = "Check for Lobby")]
-        public async Task<IActionResult> CheckLobby([FromBody] Backend.Models.CheckLobby requestedLobby)
+        public async Task<IActionResult> CheckLobby(string lobbyId)
         {
-            var lobby = await _lobbies.FindByIdAsync(requestedLobby.Id);
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
             if (lobby != null)
             {
                 return CreatedAtAction("CheckLobby", new Backend.Models.CheckLobbyResponse(lobby.Id, lobby.Game));
@@ -33,7 +33,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost(Name = "New")]
-        public async Task<IActionResult> New([FromBody] Backend.Models.CreateLobby newLobby)
+        public async Task<IActionResult> New(string game, int minPlayers, int maxPlayers)
         {
             string? Id = null;
 
@@ -48,7 +48,7 @@ namespace Backend.Controllers
                 }
             }
 
-            Backend.Models.Lobby lobby = new(newLobby, Id);
+            Backend.Models.Lobby lobby = new(minPlayers, maxPlayers, game, Id);
 
             await _lobbies.InsertAsync(lobby, keyExpire);
             await SetCoturnUser(lobby.Id, lobby.TurnPassword);
@@ -57,12 +57,12 @@ namespace Backend.Controllers
         }
 
         [HttpPatch(Name = "Lobby Set SDP")]
-        public async Task<IActionResult> SetSdp([FromBody] Backend.Models.SetLobbySdp lobbySdp)
+        public async Task<IActionResult> SetSdp([FromQuery()] string lobbyId, [FromQuery()] string turnPassword, [FromBody] List<Backend.Models.Sdp> Sdp)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbySdp.LobbyId);
-            if (lobby != null && lobby.TurnPassword == lobbySdp.TurnPassword)
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            if (lobby != null && lobby.TurnPassword == turnPassword)
             {
-                lobby.Sdp = lobbySdp.Sdp;
+                lobby.Sdp = Sdp;
                 await _lobbies.UpdateAsync(lobby);
                 return Ok();
             }
@@ -71,10 +71,10 @@ namespace Backend.Controllers
         }
 
         [HttpGet(Name = "PollPlayers")]
-        public async Task<IActionResult> PollPlayers([FromBody] Backend.Models.LobbyHeartbeat requestedLobby)
+        public async Task<IActionResult> PollPlayers(string lobbyId, string turnPassword)
         {
-            var lobby = await _lobbies.FindByIdAsync(requestedLobby.Id);
-            if (lobby != null && lobby.TurnPassword == requestedLobby.TurnPassword)
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            if (lobby != null && lobby.TurnPassword == turnPassword)
             {
                 return CreatedAtAction("PollPlayers", lobby.Players);
             }
@@ -83,10 +83,10 @@ namespace Backend.Controllers
         }
 
         [HttpPatch(Name = "Start Lobby")]
-        public async Task<IActionResult> Start([FromBody] Backend.Models.LobbyHeartbeat requestedLobby)
+        public async Task<IActionResult> Start(string lobbyId, string turnPassword)
         {
-            var lobby = await _lobbies.FindByIdAsync(requestedLobby.Id);
-            if (lobby != null && lobby.TurnPassword == requestedLobby.TurnPassword)
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            if (lobby != null && lobby.TurnPassword == turnPassword)
             {
                 lobby.Started = true;
                 await _lobbies.UpdateAsync(lobby);
@@ -97,10 +97,10 @@ namespace Backend.Controllers
         }
 
         [HttpPatch(Name = "Hearbeat")]
-        public async Task<IActionResult> Heartbeat([FromBody] Backend.Models.LobbyHeartbeat heartbeatLobby)
+        public async Task<IActionResult> Heartbeat(string lobbyId, string turnPassword)
         {
-            var lobby = await _lobbies.FindByIdAsync(heartbeatLobby.Id);
-            if (lobby != null && lobby.TurnPassword == heartbeatLobby.TurnPassword)
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            if (lobby != null && lobby.TurnPassword == turnPassword)
             {
                 await UpdateLobbyTTL(lobby, keyExpire.TotalSeconds);
                 return Ok();
@@ -110,10 +110,10 @@ namespace Backend.Controllers
         }
 
         [HttpDelete(Name = "Delete")]
-        public async Task<IActionResult> Delete([FromBody] Backend.Models.LobbyHeartbeat data)
+        public async Task<IActionResult> Delete(string lobbyId, string turnPassword)
         {
-            var lobby = await _lobbies.FindByIdAsync(data.Id);
-            if (lobby != null && lobby.TurnPassword == data.TurnPassword)
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            if (lobby != null && lobby.TurnPassword == turnPassword)
             {
                 await UpdateLobbyTTL(lobby, 1);
                 return Ok();
@@ -123,9 +123,9 @@ namespace Backend.Controllers
         }
 
         [HttpPost(Name = "Join")]
-        public async Task<IActionResult> Join([FromBody] Backend.Models.NewPlayer joiningPlayer)
+        public async Task<IActionResult> Join(string lobbyId, string name)
         {
-            var lobby = await _lobbies.FindByIdAsync(joiningPlayer.LobbyId.ToUpper());
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
             if (lobby == null || 
                 lobby.Players.Count >= lobby.MaxPlayers ||
                 lobby.Sdp.Count == 0 ||
@@ -137,12 +137,12 @@ namespace Backend.Controllers
             // Check for conflicting player names
             foreach (var lobbyPlayer in lobby.Players)
             {
-                if (lobbyPlayer.Name.ToLower() == joiningPlayer.Name.ToLower())
+                if (lobbyPlayer.Name.ToLower() == name.ToLower())
                 {
                     return Conflict();
                 }
             }
-            Backend.Models.Player player = new(joiningPlayer.Name, lobby.Id);
+            Backend.Models.Player player = new(name, lobby.Id);
 
             lobby.Players.Add(player);
 
@@ -152,16 +152,16 @@ namespace Backend.Controllers
         }
 
         [HttpPatch(Name = "Set Player Sdp")]
-        public async Task<IActionResult> SetPlayerSdp([FromBody] Backend.Models.SetSdp playerSdp)
+        public async Task<IActionResult> SetPlayerSdp([FromQuery()] string lobbyId, [FromQuery()] string turnPassword, [FromBody] Backend.Models.Sdp Sdp)
         {
-            var lobby = await _lobbies.FindByIdAsync(playerSdp.LobbyId.ToUpper());
+            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
             if (lobby != null)
             {
                 foreach (var player in lobby.Players)
                 {
-                    if (player.TurnPassword == playerSdp.TurnPassword)
+                    if (player.TurnPassword == turnPassword)
                     {
-                        player.Sdp = playerSdp.Sdp;
+                        player.Sdp = Sdp;
                         await _lobbies.UpdateAsync(lobby);
                         return Ok();
                     }
