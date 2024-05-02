@@ -10,6 +10,14 @@ builder.Services.AddFluffySpoonLetsEncrypt(new FluffySpoon.AspNet.EncryptWeMust.
     Email = Environment.GetEnvironmentVariable("TLS_EMAIL"),
     Domains = [Environment.GetEnvironmentVariable("TLS_HOST")],
     TimeUntilExpiryBeforeRenewal = TimeSpan.FromDays(30),
+    CertificateSigningRequest = new CsrInfo()
+    {
+        CountryName = "Sweden",
+        Locality = "SE",
+        Organization = "Smorsoft",
+        OrganizationUnit = "OrganizationUnitStuff",
+        State = "Norrbotten"
+    }
 });
 
 builder.Services.AddFluffySpoonLetsEncryptFileCertificatePersistence("acme.json");
