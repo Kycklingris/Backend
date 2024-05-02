@@ -1,7 +1,18 @@
+using FluffySpoon.AspNet.EncryptWeMust;
 using Redis.OM;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+builder.Services.AddFluffySpoonLetsEncrypt(new FluffySpoon.AspNet.EncryptWeMust.Certes.LetsEncryptOptions()
+{
+    Email = Environment.GetEnvironmentVariable("TLS_EMAIL"),
+    Domains = [Environment.GetEnvironmentVariable("TLS_HOST")],
+    TimeUntilExpiryBeforeRenewal = TimeSpan.FromDays(30),
+});
+
+builder.Services.AddFluffySpoonLetsEncryptFileCertificatePersistence("acme.json");
+builder.Services.AddFluffySpoonLetsEncryptMemoryChallengePersistence();
 
 builder.Services.AddCors();
 
@@ -25,6 +36,8 @@ var redisConnectionConfig = new RedisConnectionConfiguration
 };
 
 builder.Services.AddSingleton(new RedisConnectionProvider(redisConnectionConfig));
+
+
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
