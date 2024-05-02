@@ -126,8 +126,12 @@ namespace Backend.Controllers
         public async Task<IActionResult> Join(string lobbyId, string name)
         {
             var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
-            if (lobby == null || 
-                lobby.Players.Count >= lobby.MaxPlayers ||
+            if (lobby == null)
+            {
+                return NotFound();
+            }
+
+            if (lobby.Players.Count >= lobby.MaxPlayers ||
                 lobby.Sdp.Count == 0 ||
                 lobby.Started == true)
             {
