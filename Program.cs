@@ -1,3 +1,4 @@
+using Certes;
 using FluffySpoon.AspNet.EncryptWeMust;
 using Redis.OM;
 var builder = WebApplication.CreateBuilder(args);
@@ -44,6 +45,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseFluffySpoonLetsEncrypt();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
