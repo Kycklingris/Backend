@@ -1,28 +1,7 @@
-using Certes;
-using FluffySpoon.AspNet.EncryptWeMust;
 using Redis.OM;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
-builder.Services.AddFluffySpoonLetsEncrypt(new FluffySpoon.AspNet.EncryptWeMust.Certes.LetsEncryptOptions()
-{
-    Email = Environment.GetEnvironmentVariable("TLS_EMAIL"),
-    Domains = [Environment.GetEnvironmentVariable("TLS_HOST")],
-    TimeUntilExpiryBeforeRenewal = TimeSpan.FromDays(30),
-    CertificateSigningRequest = new CsrInfo()
-    {
-        CountryName = "Sweden",
-        Locality = "SE",
-        Organization = "Smorsoft",
-        OrganizationUnit = "OrganizationUnitStuff",
-        State = "Norrbotten"
-    }
-});
-
-builder.Services.AddFluffySpoonLetsEncryptFileCertificatePersistence("acme.json");
-builder.Services.AddFluffySpoonLetsEncryptMemoryChallengePersistence();
-
 builder.Services.AddCors();
 
 builder.Services.AddControllers();
@@ -54,8 +33,6 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-app.UseFluffySpoonLetsEncrypt();
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -63,7 +40,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseCors(
     options => options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
