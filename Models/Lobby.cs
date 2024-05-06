@@ -1,4 +1,5 @@
 ﻿using Redis.OM.Modeling;
+using System.Collections;
 using System.Text.Json.Serialization;
 
 namespace Backend.Models
@@ -13,7 +14,7 @@ namespace Backend.Models
         public int State { get; set; } = -1;
         public bool AudienceAllowed { get; set; } = false;
         public string TurnPassword { get; set; } = "";
-        public List<Sdp> Sdp { get; set; } = [];
+        public Dictionary<int, Signaling> SignalingMap { get; set; } = [];
         public List<Player> Players { get; set; } = [];
 
         [JsonConstructor]
@@ -30,6 +31,20 @@ namespace Backend.Models
         }
     }
 
+    public class Signaling
+    {
+        public Sdp Lobby { get; set; }
+        public Sdp? Player { get; set; }
+
+        [JsonConstructor]
+        public Signaling() { }
+
+        public Signaling(Sdp Lobby)
+        {
+            this.Lobby = Lobby;
+            this.Player = null;
+        }
+    }
     public class Sdp
     {
         public string Session { get; set; } = "";
@@ -43,14 +58,11 @@ namespace Backend.Models
         public string Name { get; set; } = "";
     }
 
-
     public class Player
     {
         public string Name { get; set; } = "";
         public string TurnUsername { get; set; } = "";
         public string TurnPassword { get; set; } = "";
-        public int SdpVersion { get; set; } = -1;
-        public Sdp? Sdp { get; set; }
 
         [JsonConstructor]
         public Player() { }
@@ -65,25 +77,15 @@ namespace Backend.Models
 
     public class NewPlayerResponse
     {
-        public Player player { get; set; }
+        public Player Player { get; set; }
         public string LobbyId { get; set; } = "";
         public string Game { get; set; } = "";
-        public Sdp LobbySdp { get; set; }
 
         public NewPlayerResponse(Player player, Lobby lobby)
         {
-            this.player = player;
+            this.Player = player;
             this.LobbyId = lobby.Id;
             this.Game = lobby.Game;
-
-            for (int i = 0; i < lobby.Players.Count; i++)
-            {
-                if (lobby.Players[i].TurnPassword == player.TurnPassword)
-                {
-                    this.LobbySdp = lobby.Sdp[i];
-                    return;
-                }
-            }
         }
     }
 

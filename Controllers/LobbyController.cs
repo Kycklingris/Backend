@@ -57,39 +57,59 @@ namespace Backend.Controllers
         }
 
         [HttpPatch(Name = "Lobby Set SDP")]
-        public async Task<IActionResult> SetSdp([FromQuery()] string lobbyId, [FromQuery()] string turnPassword, [FromBody] List<Backend.Models.Sdp> Sdp)
+        public async Task<IActionResult> SetSdp([FromQuery()] string lobbyId, [FromQuery()] string turnPassword, [FromQuery()] int index, [FromBody] Backend.Models.Sdp Sdp)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
-            if (lobby != null && lobby.TurnPassword == turnPassword)
+            lobbyId = lobbyId.ToUpper();
+
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
+            if (lobby == null)
             {
-                lobby.State = 0;
-                lobby.Sdp = Sdp;
-                await _lobbies.UpdateAsync(lobby);
-                return Ok();
+                return NotFound();
+            }
+            if (lobby.TurnPassword != turnPassword)
+            {
+                return BadRequest();   
+            }
+
+            if (!lobby.SignalingMap.TryAdd(index, new Signaling(Sdp)))
+            {
+                lobby.SignalingMap[index] = new Signaling(Sdp);
+            }
+            await _lobbies.UpdateAsync(lobby);
+            return Ok();
+        }
+
+        [HttpGet(Name = "PollPlayer")]
+        public async Task<IActionResult> PollPlayer(string lobbyId, string turnPassword, int index)
+        {
+            lobbyId = lobbyId.ToUpper();
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
+            if (lobby == null || lobby.TurnPassword != turnPassword)
+            {
+                return BadRequest();
+            }
+
+            if (lobby.SignalingMap.TryGetValue(index, out Signaling? sdp))
+            {
+                if (sdp.Player == null)
+                {
+                    return BadRequest();
+                }
+
+                return CreatedAtAction("PollPlayers", sdp.Player);
             }
 
             return BadRequest();
         }
 
-        [HttpGet(Name = "PollPlayers")]
-        public async Task<IActionResult> PollPlayers(string lobbyId, string turnPassword)
+        [HttpPatch(Name = "Set Lobby State")]
+        public async Task<IActionResult> SetState(string lobbyId, string turnPassword, int state)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            lobbyId = lobbyId.ToUpper();
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
             if (lobby != null && lobby.TurnPassword == turnPassword)
             {
-                return CreatedAtAction("PollPlayers", lobby.Players);
-            }
-
-            return BadRequest();
-        }
-
-        [HttpPatch(Name = "Start Lobby")]
-        public async Task<IActionResult> Start(string lobbyId, string turnPassword)
-        {
-            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
-            if (lobby != null && lobby.TurnPassword == turnPassword)
-            {
-                lobby.State = 1;
+                lobby.State = state;
                 await _lobbies.UpdateAsync(lobby);
                 return Ok();
             }
@@ -100,7 +120,8 @@ namespace Backend.Controllers
         [HttpPatch(Name = "Hearbeat")]
         public async Task<IActionResult> Heartbeat(string lobbyId, string turnPassword)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            lobbyId = lobbyId.ToUpper();
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
             if (lobby != null && lobby.TurnPassword == turnPassword)
             {
                 await UpdateLobbyTTL(lobby, keyExpire.TotalSeconds);
@@ -113,7 +134,8 @@ namespace Backend.Controllers
         [HttpDelete(Name = "Delete")]
         public async Task<IActionResult> Delete(string lobbyId, string turnPassword)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            lobbyId = lobbyId.ToUpper();
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
             if (lobby != null && lobby.TurnPassword == turnPassword)
             {
                 await UpdateLobbyTTL(lobby, 1);
@@ -126,7 +148,8 @@ namespace Backend.Controllers
         [HttpPost(Name = "Join")]
         public async Task<IActionResult> Join(string lobbyId, string name)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
+            lobbyId = lobbyId.ToUpper();
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
             if (lobby == null)
             {
                 return NotFound();
@@ -156,21 +179,59 @@ namespace Backend.Controllers
             return CreatedAtAction("Join", new Backend.Models.NewPlayerResponse(player, lobby));
         }
 
+        [HttpGet(Name = "Get Lobby Sdp")]
+        public async Task<IActionResult> GetLobbySdp(string lobbyId, string turnPassword)
+        {
+            lobbyId = lobbyId.ToUpper();
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
+            if (lobby == null)
+            {
+                return NotFound();
+            }
+
+            for (var i = 0; i < lobby.Players.Count; i++) 
+            {
+                if (lobby.Players[i].TurnPassword == turnPassword)
+                {
+                    if (lobby.SignalingMap.TryGetValue(i, out Signaling? signaling))
+                    {
+                        if (signaling.Player == null)
+                        {
+                            // TODO: 
+                            return CreatedAtAction("GetLobbySdp", signaling.Lobby);
+                        }
+                    }
+                    break;
+                }
+            }
+
+            return BadRequest();
+        }
+
         [HttpPatch(Name = "Set Player Sdp")]
         public async Task<IActionResult> SetPlayerSdp([FromQuery()] string lobbyId, [FromQuery()] string turnPassword, [FromBody] Backend.Models.Sdp Sdp)
         {
-            var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
-            if (lobby != null)
+            lobbyId = lobbyId.ToUpper();
+            var lobby = await _lobbies.FindByIdAsync(lobbyId);
+            if (lobby == null)
             {
-                foreach (var player in lobby.Players)
+                return NotFound();
+            }
+
+            for (var i = 0; i < lobby.Players.Count; i++)
+            {
+                if (lobby.Players[i].TurnPassword == turnPassword)
                 {
-                    if (player.TurnPassword == turnPassword)
+                    if (lobby.SignalingMap.TryGetValue(i, out Signaling? signaling))
                     {
-                        player.SdpVersion += 1;
-                        player.Sdp = Sdp;
-                        await _lobbies.UpdateAsync(lobby);
-                        return Ok();
+                        if (signaling.Player == null)
+                        {
+                            signaling.Player = Sdp;
+                            await _lobbies.UpdateAsync(lobby);
+                            return Ok();
+                        }
                     }
+                    break;
                 }
             }
 
