@@ -96,7 +96,7 @@ namespace Backend.Controllers
                     return BadRequest();
                 }
 
-                return CreatedAtAction("PollPlayers", sdp.Player);
+                return CreatedAtAction("PollPlayer", sdp.Player);
             }
 
             return BadRequest();
