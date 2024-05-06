@@ -10,7 +10,8 @@ namespace Backend.Models
         public int MinPlayers { get; set; }
         public int MaxPlayers { get; set; }
         public string Game { get; set; } = "";
-        public bool Started { get; set; } = false;
+        public int State { get; set; } = -1;
+        public bool AudienceAllowed { get; set; } = false;
         public string TurnPassword { get; set; } = "";
         public List<Sdp> Sdp { get; set; } = [];
         public List<Player> Players { get; set; } = [];
@@ -48,6 +49,7 @@ namespace Backend.Models
         public string Name { get; set; } = "";
         public string TurnUsername { get; set; } = "";
         public string TurnPassword { get; set; } = "";
+        public int SdpVersion { get; set; } = -1;
         public Sdp? Sdp { get; set; }
 
         [JsonConstructor]
@@ -79,6 +81,7 @@ namespace Backend.Models
                 if (lobby.Players[i].TurnPassword == player.TurnPassword)
                 {
                     this.LobbySdp = lobby.Sdp[i];
+                    return;
                 }
             }
         }
@@ -88,11 +91,15 @@ namespace Backend.Models
     {
         public string Id { get; set; }
         public string Game { get; set; }
+        public int State { get; set; }
+        public bool AudienceAllowed { get; set; }
 
-        public CheckLobbyResponse(string Id, string Game)
+        public CheckLobbyResponse(string Id, string Game, int State, bool Audience)
         {
             this.Id = Id;
             this.Game = Game;
+            this.State = State;
+            this.AudienceAllowed = Audience;
         }
     }
 }

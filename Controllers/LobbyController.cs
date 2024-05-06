@@ -26,7 +26,7 @@ namespace Backend.Controllers
             var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
             if (lobby != null)
             {
-                return CreatedAtAction("CheckLobby", new Backend.Models.CheckLobbyResponse(lobby.Id, lobby.Game));
+                return CreatedAtAction("CheckLobby", new Backend.Models.CheckLobbyResponse(lobby.Id, lobby.Game, lobby.State, lobby.AudienceAllowed));
             }
 
             return NotFound();
@@ -62,6 +62,7 @@ namespace Backend.Controllers
             var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
             if (lobby != null && lobby.TurnPassword == turnPassword)
             {
+                lobby.State = 0;
                 lobby.Sdp = Sdp;
                 await _lobbies.UpdateAsync(lobby);
                 return Ok();
@@ -88,7 +89,7 @@ namespace Backend.Controllers
             var lobby = await _lobbies.FindByIdAsync(lobbyId.ToUpper());
             if (lobby != null && lobby.TurnPassword == turnPassword)
             {
-                lobby.Started = true;
+                lobby.State = 1;
                 await _lobbies.UpdateAsync(lobby);
                 return Ok();
             }
@@ -132,8 +133,8 @@ namespace Backend.Controllers
             }
 
             if (lobby.Players.Count >= lobby.MaxPlayers ||
-                lobby.Sdp.Count == 0 ||
-                lobby.Started == true)
+                lobby.State != 0
+                )
             {
                 return BadRequest();
             }
@@ -165,6 +166,7 @@ namespace Backend.Controllers
                 {
                     if (player.TurnPassword == turnPassword)
                     {
+                        player.SdpVersion += 1;
                         player.Sdp = Sdp;
                         await _lobbies.UpdateAsync(lobby);
                         return Ok();
